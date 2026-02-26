@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Element Clash - ICAN Institute</title>
+    <style>
+        :root {
+            --bg-dark: #051224;
+            --card-bg: #0d2137;
+            --accent-cyan: #00f3ff;
+            --accent-red: #ff2a6d;
+            --text-gold: #ffd700;
+            --text-light: #e0e6ed;
+            --text-dim: #8fa3b3;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.03) 0%, transparent 60%),
+                url('data:image/svg+xml;utf8,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><path d="M20 0L40 10V30L20 40L0 30V10L20 0Z" fill="none" stroke="%2300f3ff" stroke-width="0.5" opacity="0.1"/></svg>');
+        }
+        h1 {
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 2.8rem;
+            margin: 20px 0 5px 0;
+            background: linear-gradient(to bottom, #fff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+        }
+        .subtitle {
+            color: var(--accent-red);
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        .game-area {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 20px;
+        }
+        .battlefield {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            position: relative;
+            margin-bottom: 20px;
+            min-height: 480px;
+        }
+        .player-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 300px;
+        }
+        .player-label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--text-light);
+        }
+        .player-label span { color: var(--accent-cyan); }
+        .cpu-label span { color: var(--accent-red); }
+        .card-container {
+            width: 280px;
+            height: 420px;
+            perspective: 1000px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #112d4a 0%, #091a2e 100%);
+            border-radius: 12px;
+            border: 2px solid var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        .card.hidden-card {
+            border-color: #333;
+            filter: grayscale(100%);
+            justify-content: center;
+            align-items: center;
+            background: repeating-linear-gradient(45deg, #0d2137, #0d2137 10px, #112d4a 10px, #112d4a 20px);
+        }
+        .card.hidden-card::after {
+            content: "?";
+            font-size: 8rem;
+            color: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+        .card-header {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .element-id-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--accent-red);
+            color: white;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .symbol {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: var(--text-gold);
+            line-height: 1;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+        }
+        .name {
+            font-size: 1rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+        .stats-box {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: default;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .player-card .stat-row { cursor: pointer; }
+        .player-card .stat-row:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--accent-cyan);
+            transform: translateX(5px);
+        }
+        .stat-label { color: var(--text-dim); }
+        .stat-value { font-weight: bold; color: var(--text-light); }
+        .mid-hud {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .vs-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-red);
+            text-shadow: 0 0 10px rgba(255, 42, 109, 0.8);
+        }
+        .controls { margin: 20px 0; display: flex; gap: 15px; }
+        button {
+            background: linear-gradient(45deg, #0066ff, #00aaff);
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.4);
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        button:disabled { background: #444; cursor: not-allowed; transform: none; box-shadow: none; }
+        #message-panel {
+            width: 90%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 60px;
+            text-align: center;
+            color: #fff;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+        .highlight-win { color: #4caf50; font-weight: bold; }
+        .highlight-loss { color: var(--accent-red); font-weight: bold; }
+        .highlight-special { color: var(--text-gold); font-weight: bold; text-transform: uppercase; }
+        @media (max-width: 768px) {
+            .battlefield { flex-direction: column; gap: 40px; }
+            .mid-hud { position: relative; transform: none; margin: -20px 0; }
+            .vs-text { background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Element Clash</h1>
+    <div class="subtitle">ICAN Institute</div>
+    <div id="message-panel">Welcome! Press "Start Game" to begin. You have 59 cards, Computer has 59 cards.</div>
+    <div class="game-area">
+        <div class="battlefield">
+            <div class="player-side">
+                <div class="player-label">Player <span id="p-deck-count">(Cards: 59)</span></div>
+                <div class="card-container">
+                    <div id="player-card" class="card player-card hidden-card"></div>
+                </div>
+            </div>
+            <div class="mid-hud">
+                <div class="vs-text">VS</div>
+            </div>
+            <div class="player-side">
+                <div class="player-label cpu-label">Computer <span id="c-deck-count">(Cards: 59)</span></div>
+                <div class="card-container">
+                    <div id="cpu-card" class="card hidden-card"></div>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="btn-start" onclick="initGame()">Start Game</button>
+            <button id="btn-next" onclick="nextRound()" disabled>Next Round</button>
+        </div>
+    </div>
+
+<script>
+const elementsDB = [
+    {s:"H", n:"Hydrogen", an:1, t:"Non-metal", p:1, g:1, v:1, mm:1.008, mp:-259.16, bp:-252.87, id:111},
+    {s:"He", n:"Helium", an:2, t:"Noble Gas", p:1, g:18, v:0, mm:4.0026, mp:-272.2, bp:-268.93, id:1810},
+    {s:"Li", n:"Lithium", an:3, t:"Alkali Metal", p:2, g:1, v:1, mm:6.94, mp:180.5, bp:1342, id:121},
+    {s:"Be", n:"Beryllium", an:4, t:"Alkaline Earth Metal", p:2, g:2, v:2, mm:9.012, mp:1287, bp:2470, id:222},
+    {s:"B", n:"Boron", an:5, t:"Metalloid", p:2, g:13, v:3, mm:10.81, mp:2076, bp:3927, id:1323},
+    {s:"C", n:"Carbon", an:6, t:"Non-metal", p:2, g:14, v:4, mm:12.011, mp:3550, bp:4827, id:1424},
+    {s:"N", n:"Nitrogen", an:7, t:"Non-metal", p:2, g:15, v:3, mm:14.007, mp:-210, bp:-195.79, id:1523},
+    {s:"O", n:"Oxygen", an:8, t:"Non-metal", p:2, g:16, v:2, mm:15.999, mp:-218.79, bp:-182.95, id:1622},
+    {s:"F", n:"Fluorine", an:9, t:"Halogen", p:2, g:17, v:1, mm:18.998, mp:-219.67, bp:-188.12, id:1721},
+    {s:"Ne", n:"Neon", an:10, t:"Noble Gas", p:2, g:18, v:0, mm:20.180, mp:-248.59, bp:-246.08, id:1820},
+    {s:"Na", n:"Sodium", an:11, t:"Alkali Metal", p:3, g:1, v:1, mm:22.990, mp:97.79, bp:883, id:131},
+    {s:"Mg", n:"Magnesium", an:12, t:"Alkaline Earth Metal", p:3, g:2, v:2, mm:24.305, mp:650, bp:1090, id:232},
+    {s:"Al", n:"Aluminium", an:13, t:"Post-Transition Metal", p:3, g:13, v:3, mm:26.982, mp:660.3, bp:2519, id:1333},
+    {s:"Si", n:"Silicon", an:14, t:"Metalloid", p:3, g:14, v:4, mm:28.085, mp:1414, bp:3265, id:1434},
+    {s:"P", n:"Phosphorus", an:15, t:"Non-metal", p:3, g:15, v:3, mm:30.974, mp:44.15, bp:280, id:1533},
+    {s:"S", n:"Sulfur", an:16, t:"Non-metal", p:3, g:16, v:2, mm:32.06, mp:115.2, bp:444.6, id:1632},
+    {s:"Cl", n:"Chlorine", an:17, t:"Halogen", p:3, g:17, v:1, mm:35.45, mp:-101.5, bp:-34.04, id:1731},
+    {s:"Ar", n:"Argon", an:18, t:"Noble Gas", p:3, g:18, v:0, mm:39.948, mp:-189.34, bp:-185.8, id:1830},
+    {s:"K", n:"Potassium", an:19, t:"Alkali Metal", p:4, g:1, v:1, mm:39.098, mp:63.5, bp:759, id:141},
+    {s:"Ca", n:"Calcium", an:20, t:"Alkaline Earth Metal", p:4, g:2, v:2, mm:40.078, mp:842, bp:1484, id:242},
+    {s:"Sc", n:"Scandium", an:21, t:"Transition Metal", p:4, g:3, v:3, mm:44.956, mp:1541, bp:2830, id:343},
+    {s:"Ti", n:"Titanium", an:22, t:"Transition Metal", p:4, g:4, v:4, mm:47.867, mp:1668, bp:3287, id:444},
+    {s:"V", n:"Vanadium", an:23, t:"Transition Metal", p:4, g:5, v:5, mm:50.942, mp:1910, bp:3407, id:455},
+    {s:"Cr", n:"Chromium", an:24, t:"Transition Metal", p:4, g:6, v:6, mm:51.996, mp:1907, bp:2671, id:466},
+    {s:"Mn", n:"Manganese", an:25, t:"Transition Metal", p:4, g:7, v:7, mm:54.938, mp:1246, bp:2061, id:477},
+    {s:"Fe", n:"Iron", an:26, t:"Transition Metal", p:4, g:8, v:3, mm:55.845, mp:1538, bp:2862, id:482},
+    {s:"Co", n:"Cobalt", an:27, t:"Transition Metal", p:4, g:9, v:3, mm:58.933, mp:1495, bp:2927, id:492},
+    {s:"Ni", n:"Nickel", an:28, t:"Transition Metal", p:4, g:10, v:2, mm:58.693, mp:1455, bp:2730, id:4102},
+    {s:"Cu", n:"Copper", an:29, t:"Transition Metal", p:4, g:11, v:2, mm:63.546, mp:1085, bp:2562, id:4112},
+    {s:"Zn", n:"Zinc", an:30, t:"Transition Metal", p:4, g:12, v:2, mm:65.38, mp:419.5, bp:907, id:1242},
+    {s:"Ga", n:"Gallium", an:31, t:"Post-Transition Metal", p:4, g:13, v:3, mm:69.723, mp:29.76, bp:2204, id:1343},
+    {s:"Ge", n:"Germanium", an:32, t:"Metalloid", p:4, g:14, v:4, mm:72.63, mp:938.3, bp:2833, id:1444},
+    {s:"As", n:"Arsenic", an:33, t:"Metalloid", p:4, g:15, v:3, mm:74.922, mp:817, bp:614, id:1543},
+    {s:"Se", n:"Selenium", an:34, t:"Non-metal", p:4, g:16, v:2, mm:78.971, mp:221, bp:685, id:1642},
+    {s:"Br", n:"Bromine", an:35, t:"Halogen", p:4, g:17, v:1, mm:79.904, mp:-7.2, bp:58.8, id:1741},
+    {s:"Kr", n:"Krypton", an:36, t:"Noble Gas", p:4, g:18, v:0, mm:83.798, mp:-157.37, bp:-153.22, id:1840},
+    {s:"Rb", n:"Rubidium", an:37, t:"Alkali Metal", p:5, g:1, v:1, mm:85.468, mp:39.3, bp:688, id:151},
+    {s:"Sr", n:"Strontium", an:38, t:"Alkaline Earth Metal", p:5, g:2, v:2, mm:87.62, mp:777, bp:1382, id:252},
+    {s:"Y", n:"Yttrium", an:39, t:"Transition Metal", p:5, g:3, v:3, mm:88.906, mp:1526, bp:3338, id:353},
+    {s:"Zr", n:"Zirconium", an:40, t:"Transition Metal", p:5, g:4, v:4, mm:91.224, mp:1855, bp:4409, id:454},
+    {s:"Nb", n:"Niobium", an:41, t:"Transition Metal", p:5, g:5, v:5, mm:92.906, mp:2477, bp:4744, id:555},
+    {s:"Mo", n:"Molybdenum", an:42, t:"Transition Metal", p:5, g:6, v:6, mm:95.95, mp:2623, bp:4639, id:656},
+    {s:"Tc", n:"Technetium", an:43, t:"Transition Metal", p:5, g:7, v:7, mm:98, mp:2157, bp:4265, id:757},
+    {s:"Ru", n:"Ruthenium", an:44, t:"Transition Metal", p:5, g:8, v:3, mm:101.07, mp:2334, bp:4150, id:853},
+    {s:"Rh", n:"Rhodium", an:45, t:"Transition Metal", p:5, g:9, v:3, mm:102.91, mp:1964, bp:3695, id:953},
+    {s:"Pd", n:"Palladium", an:46, t:"Transition Metal", p:5, g:10, v:2, mm:106.42, mp:1554.9, bp:2963, id:1052},
+    {s:"Ag", n:"Silver", an:47, t:"Transition Metal", p:5, g:11, v:1, mm:107.87, mp:961.8, bp:2162, id:1151},
+    {s:"Cd", n:"Cadmium", an:48, t:"Transition Metal", p:5, g:12, v:2, mm:112.41, mp:321.1, bp:767, id:1252},
+    {s:"In", n:"Indium", an:49, t:"Post-Transition Metal", p:5, g:13, v:3, mm:114.82, mp:156.6, bp:2072, id:1353},
+    {s:"Sn", n:"Tin", an:50, t:"Post-Transition Metal", p:5, g:14, v:4, mm:118.71, mp:231.9, bp:2602, id:1454},
+    {s:"Sb", n:"Antimony", an:51, t:"Metalloid", p:5, g:15, v:3, mm:121.76, mp:630.63, bp:1587, id:1555},
+    {s:"Te", n:"Tellurium", an:52, t:"Metalloid", p:5, g:16, v:2, mm:127.6, mp:449.51, bp:988, id:1454},
+    {s:"I", n:"Iodine", an:53, t:"Halogen", p:5, g:17, v:1, mm:126.90, mp:113.7, bp:184.3, id:1751},
+    {s:"Xe", n:"Xenon", an:54, t:"Noble Gas", p:5, g:18, v:0, mm:131.29, mp:-111.8, bp:-108.1, id:1850},
+    {s:"Cs", n:"Caesium", an:55, t:"Alkali Metal", p:6, g:1, v:1, mm:132.91, mp:28.5, bp:671, id:161},
+    {s:"Ba", n:"Barium", an:56, t:"Alkaline Earth Metal", p:6, g:2, v:2, mm:137.33, mp:727, bp:1897, id:262},
+    {s:"La", n:"Lanthanum", an:57, t:"Lanthanide", p:6, g:3, v:3, mm:138.91, mp:920, bp:3464, id:363},
+    {s:"Ce", n:"Cerium", an:58, t:"Lanthanide", p:6, g:3, v:3, mm:140.12, mp:798, bp:3426, id:364},
+    {s:"Pr", n:"Praseodymium", an:59, t:"Lanthanide", p:6, g:3, v:3, mm:140.91, mp:931, bp:3520, id:363},
+    {s:"Nd", n:"Neodymium", an:60, t:"Lanthanide", p:6, g:3, v:3, mm:144.24, mp:1024, bp:3074, id:363},
+    {s:"Pm", n:"Promethium", an:61, t:"Lanthanide", p:6, g:3, v:3, mm:145, mp:1042, bp:3000, id:363},
+    {s:"Sm", n:"Samarium", an:62, t:"Lanthanide", p:6, g:3, v:3, mm:150.36, mp:1072, bp:1794, id:363},
+    {s:"Eu", n:"Europium", an:63, t:"Lanthanide", p:6, g:3, v:3, mm:151.96, mp:822, bp:1529, id:363},
+    {s:"Gd", n:"Gadolinium", an:64, t:"Lanthanide", p:6, g:3, v:3, mm:157.25, mp:1313, bp:3273, id:363},
+    {s:"Tb", n:"Terbium", an:65, t:"Lanthanide", p:6, g:3, v:3, mm:158.93, mp:1356, bp:3230, id:363},
+    {s:"Dy", n:"Dysprosium", an:66, t:"Lanthanide", p:6, g:3, v:3, mm:162.50, mp:1412, bp:2567, id:363},
+    {s:"Ho", n:"Holmium", an:67, t:"Lanthanide", p:6, g:3, v:3, mm:164.93, mp:1474, bp:2700, id:363},
+    {s:"Er", n:"Erbium", an:68, t:"Lanthanide", p:6, g:3, v:3, mm:167.26, mp:1529, bp:2868, id:363},
+    {s:"Tm", n:"Thulium", an:69, t:"Lanthanide", p:6, g:3, v:3, mm:168.93, mp:1545, bp:1950, id:363},
+    {s:"Yb", n:"Ytterbium", an:70, t:"Lanthanide", p:6, g:3, v:2, mm:173.05, mp:819, bp:1196, id:362},
+    {s:"Lu", n:"Lutetium", an:71, t:"Lanthanide", p:6, g:3, v:3, mm:174.97, mp:1663, bp:3402, id:363},
+    {s:"Hf", n:"Hafnium", an:72, t:"Transition Metal", p:6, g:4, v:4, mm:178.49, mp:2233, bp:4602, id:464},
+    {s:"Ta", n:"Tantalum", an:73, t:"Transition Metal", p:6, g:5, v:5, mm:180.95, mp:3017, bp:5458, id:565},
+    {s:"W", n:"Tungsten", an:74, t:"Transition Metal", p:6, g:6, v:6, mm:183.84, mp:3422, bp:5555, id:666},
+    {s:"Re", n:"Rhenium", an:75, t:"Transition Metal", p:6, g:7, v:7, mm:186.21, mp:3186, bp:5596, id:767},
+    {s:"Os", n:"Osmium", an:76, t:"Transition Metal", p:6, g:8, v:4, mm:190.23, mp:3033, bp:5012, id:864},
+    {s:"Ir", n:"Iridium", an:77, t:"Transition Metal", p:6, g:9, v:3, mm:192.22, mp:2446, bp:4428, id:963},
+    {s:"Pt", n:"Platinum", an:78, t:"Transition Metal", p:6, g:10, v:2, mm:195.08, mp:1768.3, bp:3825, id:1062},
+    {s:"Au", n:"Gold", an:79, t:"Transition Metal", p:6, g:11, v:1, mm:196.97, mp:1064, bp:2970, id:1161},
+    {s:"Hg", n:"Mercury", an:80, t:"Transition Metal", p:6, g:12, v:2, mm:200.59, mp:-38.83, bp:356.73, id:1062},
+    {s:"Tl", n:"Thallium", an:81, t:"Post-Transition Metal", p:6, g:13, v:1, mm:204.38, mp:304, bp:1473, id:1361},
+    {s:"Pb", n:"Lead", an:82, t:"Post-Transition Metal", p:6, g:14, v:2, mm:207.2, mp:327.5, bp:1749, id:1462},
+    {s:"Bi", n:"Bismuth", an:83, t:"Post-Transition Metal", p:6, g:15, v:3, mm:208.98, mp:271.5, bp:1564, id:1563},
+    {s:"Po", n:"Polonium", an:84, t:"Metalloid", p:6, g:16, v:2, mm:209, mp:254, bp:962, id:1662},
+    {s:"At", n:"Astatine", an:85, t:"Halogen", p:6, g:17, v:1, mm:210, mp:302, bp:337, id:1761},
+    {s:"Rn", n:"Radon", an:86, t:"Noble Gas", p:6, g:18, v:0, mm:222, mp:-71, bp:-61.7, id:1860},
+    {s:"Fr", n:"Francium", an:87, t:"Alkali Metal", p:7, g:1, v:1, mm:223, mp:27, bp:677, id:171},
+    {s:"Ra", n:"Radium", an:88, t:"Alkaline Earth Metal", p:7, g:2, v:2, mm:226, mp:700, bp:1737, id:272},
+    {s:"Ac", n:"Actinium", an:89, t:"Actinide", p:7, g:3, v:3, mm:227, mp:1050, bp:3200, id:373},
+    {s:"Th", n:"Thorium", an:90, t:"Actinide", p:7, g:3, v:4, mm:232.04, mp:1750, bp:4820, id:374},
+    {s:"Pa", n:"Protactinium", an:91, t:"Actinide", p:7, g:3, v:5, mm:231.04, mp:1572, bp:4000, id:374},
+    {s:"U", n:"Uranium", an:92, t:"Actinide", p:7, g:3, v:6, mm:238.03, mp:1132, bp:4131, id:376},
+    {s:"Np", n:"Neptunium", an:93, t:"Actinide", p:7, g:3, v:5, mm:237, mp:644, bp:3902, id:375},
+    {s:"Pu", n:"Plutonium", an:94, t:"Actinide", p:7, g:3, v:4, mm:244, mp:640, bp:3228, id:376},
+    {s:"Am", n:"Americium", an:95, t:"Actinide", p:7, g:3, v:3, mm:243, mp:1176, bp:2607, id:373},
+    {s:"Cm", n:"Curium", an:96, t:"Actinide", p:7, g:3, v:3, mm:247, mp:1340, bp:3110, id:373},
+    {s:"Bk", n:"Berkelium", an:97, t:"Actinide", p:7, g:3, v:3, mm:247, mp:986, bp:2627, id:373},
+    {s:"Cf", n:"Californium", an:98, t:"Actinide", p:7, g:3, v:3, mm:251, mp:900, bp:1473, id:373},
+    {s:"Es", n:"Einsteinium", an:99, t:"Actinide", p:7, g:3, v:3, mm:252, mp:860, bp:996, id:373},
+    {s:"Fm", n:"Fermium", an:100, t:"Actinide", p:7, g:3, v:3, mm:257, mp:1527, bp:null, id:373},
+    {s:"Md", n:"Mendelevium", an:101, t:"Actinide", p:7, g:3, v:3, mm:258, mp:827, bp:null, id:373},
+    {s:"No", n:"Nobelium", an:102, t:"Actinide", p:7, g:3, v:2, mm:259, mp:827, bp:null, id:373},
+    {s:"Lr", n:"Lawrencium", an:103, t:"Actinide", p:7, g:3, v:3, mm:262, mp:1900, bp:null, id:373},
+    {s:"Rf", n:"Rutherfordium", an:104, t:"Transition Metal", p:7, g:4, v:4, mm:267, mp:null, bp:null, id:474},
+    {s:"Db", n:"Dubnium", an:105, t:"Transition Metal", p:7, g:5, v:5, mm:270, mp:null, bp:null, id:474},
+    {s:"Sg", n:"Seaborgium", an:106, t:"Transition Metal", p:7, g:6, v:6, mm:271, mp:null, bp:null, id:676},
+    {s:"Bh", n:"Bohrium", an:107, t:"Transition Metal", p:7, g:7, v:7, mm:270, mp:null, bp:null, id:777},
+    {s:"Hs", n:"Hassium", an:108, t:"Transition Metal", p:7, g:8, v:8, mm:277, mp:null, bp:null, id:878},
+    {s:"Mt", n:"Meitnerium", an:109, t:"Transition Metal", p:7, g:9, v:9, mm:268, mp:null, bp:null, id:979},
+    {s:"Ds", n:"Darmstadtium", an:110, t:"Transition Metal", p:7, g:10, v:2, mm:281, mp:null, bp:null, id:1072},
+    {s:"Rg", n:"Roentgenium", an:111, t:"Transition Metal", p:7, g:11, v:1, mm:282, mp:null, bp:null, id:1171},
+    {s:"Cn", n:"Copernicium", an:112, t:"Transition Metal", p:7, g:12, v:2, mm:285, mp:null, bp:null, id:1272},
+    {s:"Nh", n:"Nihonium", an:113, t:"Post-Transition Metal", p:7, g:13, v:3, mm:286, mp:null, bp:null, id:1373},
+    {s:"Fl", n:"Flerovium", an:114, t:"Post-Transition Metal", p:7, g:14, v:4, mm:289, mp:null, bp:null, id:1474},
+    {s:"Mc", n:"Moscovium", an:115, t:"Post-Transition Metal", p:7, g:15, v:5, mm:288, mp:null, bp:null, id:1575},
+    {s:"Lv", n:"Livermorium", an:116, t:"Post-Transition Metal", p:7, g:16, v:6, mm:293, mp:null, bp:null, id:1676},
+    {s:"Ts", n:"Tennessine", an:117, t:"Halogen", p:7, g:17, v:1, mm:294, mp:null, bp:null, id:1771},
+    {s:"Og", n:"Oganesson", an:118, t:"Noble Gas", p:7, g:18, v:0, mm:294, mp:null, bp:null, id:1870}
+];
+
+const dominanceIDs = [111, 222, 333, 444, 555, 666, 777];
+
+let playerDeck = [];
+let cpuDeck = [];
+let currentPlayerCard = null;
+let currentCpuCard = null;
+let gameActive = false;
+
+const msgPanel = document.getElementById('message-panel');
+const btnNext = document.getElementById('btn-next');
+const btnStart = document.getElementById('btn-start');
+
+function initGame() {
+    let deck = [...elementsDB].sort(() => Math.random() - 0.5);
+    playerDeck = deck.slice(0, 59);
+    cpuDeck = deck.slice(59);
+    gameActive = true;
+    btnStart.style.display = 'none';
+    btnNext.disabled = false;
+    updateCounts();
+    log("Game Started! You have 59 cards. Select a stat on your card to battle.");
+    nextRound();
+}
+
+function nextRound() {
+    if (!gameActive) return;
+    if (playerDeck.length === 0) { endGame("Computer Wins! You ran out of cards."); return; }
+    if (cpuDeck.length === 0) { endGame("You Win! Computer ran out of cards."); return; }
+    currentPlayerCard = playerDeck.shift();
+    currentCpuCard = cpuDeck.shift();
+    renderCard('player-card', currentPlayerCard, true);
+    renderCard('cpu-card', currentCpuCard, false);
+    btnNext.disabled = true;
+    log("Cards drawn. Choose your attribute!");
+}
+
+function renderCard(elementId, card, isInteractive) {
+    const el = document.getElementById(elementId);
+    el.className = isInteractive ? 'card player-card' : 'card cpu-card hidden-card';
+    if (!isInteractive) { el.innerHTML = `<div class="element-id-badge">ID: ???</div>`; return; }
+    const stats = [
+        { key: 'an', label: 'Atomic Number', val: card.an, type: 'power' },
+        { key: 'mp', label: 'Melting Point', val: card.mp, type: 'power' },
+        { key: 'bp', label: 'Boiling Point', val: card.bp, type: 'power' },
+        { key: 'mm', label: 'Molar Mass', val: card.mm, type: 'power' },
+        { key: 'v', label: 'Valency', val: card.v, type: 'weak' },
+        { key: 'p', label: 'Period', val: card.p, type: 'weak' },
+        { key: 'g', label: 'Group', val: card.g, type: 'weak' }
+    ];
+    let statsHTML = stats.map(s => {
+        let u = s.key==='mm' ? ' g/mol' : (s.key==='mp'||s.key==='bp') ? ' °C' : '';
+        let v = (s.val === null || s.val === undefined) ? 'Unknown' : s.val;
+        return `<div class="stat-row" onclick="selectStat('${s.key}','${s.type}')" data-key="${s.key}">
+            <span class="stat-label">${s.label}</span>
+            <span class="stat-value">${v}${u}</span>
+        </div>`;
+    }).join('');
+    el.innerHTML = `
+        <div class="element-id-badge">ID: ${card.id}</div>
+        <div class="card-header">
+            <div class="symbol">${card.s}</div>
+            <div class="name">${card.n}</div>
+        </div>
+        <div class="stats-box">${statsHTML}</div>`;
+}
+
+function selectStat(key, type) {
+    if (!currentPlayerCard || !currentCpuCard) return;
+    const cpuCardEl = document.getElementById('cpu-card');
+    cpuCardEl.className = 'card cpu-card';
+    const stats = [
+        { key: 'an', label: 'Atomic Number', val: currentCpuCard.an },
+        { key: 'mp', label: 'Melting Point', val: currentCpuCard.mp },
+        { key: 'bp', label: 'Boiling Point', val: currentCpuCard.bp },
+        { key: 'mm', label: 'Molar Mass', val: currentCpuCard.mm },
+        { key: 'v', label: 'Valency', val: currentCpuCard.v },
+        { key: 'p', label: 'Period', val: currentCpuCard.p },
+        { key: 'g', label: 'Group', val: currentCpuCard.g }
+    ];
+    let statsHTML = stats.map(s => {
+        let u = s.key==='mm' ? ' g/mol' : (s.key==='mp'||s.key==='bp') ? ' °C' : '';
+        let v = (s.val === null) ? 'Unknown' : s.val;
+        return `<div class="stat-row"><span class="stat-label">${s.label}</span><span class="stat-value">${v}${u}</span></div>`;
+    }).join('');
+    cpuCardEl.innerHTML = `
+        <div class="element-id-badge">ID: ${currentCpuCard.id}</div>
+        <div class="card-header">
+            <div class="symbol">${currentCpuCard.s}</div>
+            <div class="name">${currentCpuCard.n}</div>
+        </div>
+        <div class="stats-box">${statsHTML}</div>`;
+
+    const pDomRank = dominanceIDs.indexOf(currentPlayerCard.id);
+    const cDomRank = dominanceIDs.indexOf(currentCpuCard.id);
+
+    if (pDomRank !== -1 && cDomRank === -1) {
+        log(`<span class="highlight-special">ID DOMINANCE!</span> Your ID ${currentPlayerCard.id} defeats the opponent!`);
+        playerWins(); return;
+    } else if (cDomRank !== -1 && pDomRank === -1) {
+        log(`<span class="highlight-special">ID DOMINANCE!</span> Enemy ID ${currentCpuCard.id} defeats you!`);
+        cpuWins(); return;
+    } else if (pDomRank !== -1 && cDomRank !== -1) {
+        if (pDomRank < cDomRank) { log(`<span class="highlight-special">TITAN CLASH!</span> Your Dominance ID is stronger!`); playerWins(); }
+        else if (cDomRank < pDomRank) { log(`<span class="highlight-special">TITAN CLASH!</span> Enemy Dominance ID is stronger!`); cpuWins(); }
+        else { log(`<span class="highlight-special">TIE!</span> Equal Dominance IDs. Self-Destruct!`); updateCounts(); btnNext.disabled = false; }
+        return;
+    }
+
+    let pVal = currentPlayerCard[key];
+    let cVal = currentCpuCard[key];
+
+    if (pVal === null && cVal === null) { log("Both values Unknown. Tie!"); tie(); return; }
+    if (pVal === null) { log("Your value Unknown. You lose."); cpuWins(); return; }
+    if (cVal === null) { log("Enemy value Unknown. You win!"); playerWins(); return; }
+
+    if (pVal === cVal) {
+        if (currentPlayerCard.id > currentCpuCard.id) {
+            log(`Tie on value! Higher ID wins! (You: ${currentPlayerCard.id} vs CPU: ${currentCpuCard.id})`);
+            playerWins();
+        } else if (currentCpuCard.id > currentPlayerCard.id) {
+            log(`Tie on value! Higher ID wins! (CPU: ${currentCpuCard.id} vs You: ${currentPlayerCard.id})`);
+            cpuWins();
+        } else {
+            log("Perfect Tie! Self-Destruct! Cards removed.");
+            btnNext.disabled = false;
+        }
+        return;
+    }
+
+    let playerWinsRound = (type === 'power') ? (pVal > cVal) : (pVal < cVal);
+    let logicText = type === 'power' ? `(High Wins: ${pVal} vs ${cVal})` : `(Low Wins: ${pVal} vs ${cVal})`;
+
+    if (playerWinsRound) { log(`<span class="highlight-win">You WIN!</span> ${logicText}`); playerWins(); }
+    else { log(`<span class="highlight-loss">You LOSE!</span> ${logicText}`); cpuWins(); }
+}
+
+function playerWins() { playerDeck.push(currentPlayerCard, currentCpuCard); updateCounts(); btnNext.disabled = false; }
+function cpuWins() { cpuDeck.push(currentPlayerCard, currentCpuCard); updateCounts(); btnNext.disabled = false; }
+function tie() { updateCounts(); btnNext.disabled = false; }
+
+function updateCounts() {
+    document.getElementById('p-deck-count').innerText = `(Cards: ${playerDeck.length})`;
+    document.getElementById('c-deck-count').innerText = `(Cards: ${cpuDeck.length})`;
+}
+
+function log(msg) { msgPanel.innerHTML = msg; }
+
+function endGame(msg) {
+    log(`<span class="highlight-win">${msg}</span> Click Start to play again.`);
+    gameActive = false;
+    btnStart.style.display = 'block';
+    btnStart.innerText = "Restart Game";
+    btnNext.disabled = true;
+}
+</script>
+</body>
+</html>
